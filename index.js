@@ -3,6 +3,7 @@ import { manager } from './manager'
 var app = require('express')()
 var http = require('http').Server(app)
 var io = require('socket.io')(http)
+var port = process.env.PORT || 3001;
 
 app.use(function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
@@ -14,7 +15,7 @@ app.get('/', function(req, res, next) {
     res.send('<h1>Hello world</h1>');
 });
 
-http.listen(3001, function(){
+http.listen(port, function(){
   console.log('listening on *:3001')
 });
 
