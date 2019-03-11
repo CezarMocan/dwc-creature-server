@@ -1,7 +1,7 @@
 import config from "./config.json"
 import Client from './Client'
 
-const MOCK_CREATURE_ID = 12
+const MOCK_CREATURE_ID = 3
 
 class Manager {
   constructor() {
@@ -17,7 +17,6 @@ class Manager {
   }
 
   addClient(socket) {
-
     const client = new Client({
       id: socket.id,
       socket: socket,
@@ -29,7 +28,7 @@ class Manager {
 
     // If this is the first client in current session, send the creature over to them.
     if (this.noClients == 1) {
-      this.passCreatureTo(MOCK_CREATURE_ID, client, { x: 0, y: 0 })
+      this.passCreatureTo(MOCK_CREATURE_ID, client)
     }
 
     console.log('Connected: ', socket.id, this.noClients)
@@ -54,6 +53,8 @@ class Manager {
     this.creatures[creatureId] = {
       helloTimestamp: Date.now()
     }
+
+    this.moveCreature(creatureId, -1)
   }
 
   goodbyeCreature(creatureId) {
@@ -64,6 +65,9 @@ class Manager {
   moveCreature(creatureId, prevId) {
     // Get all clients
     const clientsAll = Object.values(this.clients)
+
+    // If no clients are connected, do nothing
+    if (!clientsAll.length) return
 
     // Filter down to clients who are active (sent a heartbeat recently)
     const clientsActive = clientsAll.filter((client) => client.isActive)
@@ -81,7 +85,7 @@ class Manager {
     const nextClient = candidates[parseInt(Math.floor(Math.random() * candidates.length))]
 
     // Pass creature to next client
-    this.passCreatureTo(MOCK_CREATURE_ID, nextClient)
+    this.passCreatureTo(creatureId, nextClient)
   }
 
   passCreatureTo(creatureId, client) {

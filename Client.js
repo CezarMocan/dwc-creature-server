@@ -1,3 +1,5 @@
+import config from "./config.json"
+
 export default class Client {
   constructor({ id, socket, onDisconnect, onCreatureExit }) {
     this.id = id
@@ -11,6 +13,21 @@ export default class Client {
     this.heartbeatTimestamp = Date.now()
 
     this.socketSetup()
+  }
+
+  socketSetup() {
+    this.socket.on('creatureExit', ({ creatureId }) => {
+      this.releaseCreature(creatureId)
+    })
+
+    this.socket.on('disconnect', () => {
+      this.releaseAllCreatures()
+      this.onDisconnect(this.id)
+    })
+
+    this.socket.on('heartbeat', () => {
+      this.heartbeatTimestamp = Date.now()
+    })
   }
 
   get isActive() {
@@ -38,24 +55,5 @@ export default class Client {
     Object.keys(this.creatureOwnership).forEach(creatureId => {
       this.releaseCreature(creatureId)
     })
-  }
-
-  socketSetup() {
-    this.socket.on('creatureExit', ({ creatureId }) => {
-      this.releaseCreature(creatureId)
-    })
-
-    this.socket.on('disconnect', () => {
-      this.releaseAllCreatures()
-      this.onDisconnect(this.id)
-    })
-
-    this.socket.on('heartbeat', () => {
-      this.heartbeatTimestamp = Date.now()
-    })
-  }
-
-  socketEmit(evt, data) {
-    this.socket.emit(evt, data)
   }
 }
