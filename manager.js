@@ -58,11 +58,19 @@ class Manager {
   }
 
   goodbyeCreature(creatureId) {
+    if (!this.isCreaturePresent(creatureId)) return
     const creatureData = this.creatures[creatureId]
     delete this.creatures[creatureId]
   }
 
+  isCreaturePresent(creatureId) {
+    return !!this.creatures[creatureId]
+  }
+
   moveCreature(creatureId, prevId) {
+    // If the creature has already left the garden, do nothing
+    if (!this.isCreaturePresent(creatureId)) return
+
     // Get all clients
     const clientsAll = Object.values(this.clients)
 
