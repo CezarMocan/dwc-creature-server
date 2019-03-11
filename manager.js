@@ -26,9 +26,11 @@ class Manager {
 
     this.clients[socket.id] = client
 
-    // If this is the first client in current session, send the creature over to them.
+    // If this is the first client in current session, send all active creatures over to them.
     if (this.noClients == 1) {
-      this.passCreatureTo(MOCK_CREATURE_ID, client)
+      Object.keys(this.creatures).forEach((creatureId) => {
+        this.passCreatureTo(creatureId, client)
+      })
     }
 
     console.log('Connected: ', socket.id, this.noClients)
@@ -104,6 +106,7 @@ class Manager {
     const clientCurrCreatureCount = client.creatureTotalCount
 
     setTimeout(() => {
+      console.log('Force release check: ', client.hasCreature(creatureId), client.creatureTotalCount, clientCurrCreatureCount, client.isActive)
       if (client.hasCreature(creatureId) && 
           client.creatureTotalCount == clientCurrCreatureCount && 
           !client.isActive) 
