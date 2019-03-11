@@ -1,10 +1,14 @@
 import config from "./config.json"
+import Client from './Client'
+
+const MOCK_CREATURE_ID = 12
 
 class Manager {
   constructor() {
     this.clients = {}
+    this.creatures = {}
 
-    this.onClientDisconnect = this.onClientDisconnect.bind(this)
+    this.removeClient = this.removeClient.bind(this)
     this.onClientCreatureExit = this.onClientCreatureExit.bind(this)
   }
 
@@ -17,7 +21,7 @@ class Manager {
     const client = new Client({
       id: socket.id,
       socket: socket,
-      onDisconnect: this.onClientDisconnect,
+      onDisconnect: this.removeClient,
       onCreatureExit: this.onClientCreatureExit
     })
 
@@ -25,23 +29,39 @@ class Manager {
 
     // If this is the first client in current session, send the creature over to them.
     if (this.noClients == 1) {
-      this.passCreatureTo(client, { x: 0, y: 0 })
+      this.passCreatureTo(MOCK_CREATURE_ID, client, { x: 0, y: 0 })
     }
 
     console.log('Connected: ', socket.id, this.noClients)
   }
 
-  onClientDisconnect(id) {
+  removeClient(id) {
     delete this.clients[id]
     console.log('disconnected: ', id, this.noClients)
   }
 
-  onClientCreatureExit(id, position) {
-    console.log('Creature exited: ', id, position)
-    this.moveCreature(id, position)
+  onClientCreatureExit(creatureId, clientId) {
+    console.log('Creature exited: ', creatureId, clientId)
+    this.moveCreature(creatureId, clientId)
   }
 
-  moveCreature(prevId, lastPosition) {
+  helloCreature(creatureId) {
+    if (this.creatures[creatureId]) {
+      console.warn('Creature ' + creatureId + ' is already in this garden.\nNo action taken\n\n')
+      return
+    }
+
+    this.creatures[creatureId] = {
+      helloTimestamp: Date.now()
+    }
+  }
+
+  goodbyeCreature(creatureId) {
+    const creatureData = this.creatures[creatureId]
+    delete this.creatures[creatureId]
+  }
+
+  moveCreature(creatureId, prevId) {
     // Get all clients
     const clientsAll = Object.values(this.clients)
 
@@ -61,75 +81,27 @@ class Manager {
     const nextClient = candidates[parseInt(Math.floor(Math.random() * candidates.length))]
 
     // Pass creature to next client
-    this.passCreatureTo(nextClient, lastPosition)
+    this.passCreatureTo(MOCK_CREATURE_ID, nextClient)
   }
 
-  passCreatureTo(client, position) {
+  passCreatureTo(creatureId, client) {
     if (!client) return
-    client.acquireCreature(position)
+    client.acquireCreature(creatureId)
 
     // If client has been holding on to the creature for too long, move on.
     const clientCurrCreatureCount = client.creatureTotalCount
+
     setTimeout(() => {
-      if (client.hasCreature && client.creatureTotalCount == clientCurrCreatureCount && !client.isActive) {
+      if (client.hasCreature(creatureId) && 
+          client.creatureTotalCount == clientCurrCreatureCount && 
+          !client.isActive) 
+      {
         console.log('THIS IS A FORCED RELEASE')
-        client.releaseCreature({ x: 0, y: 0})
+        client.releaseCreature(creatureId)
       }
+
     }, config.CREATURE_FORCE_MOVE_MS)
   }
 }
 
 export const manager = new Manager()
-
-class Client {
-  constructor({ id, socket, onDisconnect, onCreatureExit }) {
-    this.id = id
-    this.socket = socket
-    this.onDisconnect = onDisconnect
-    this.onCreatureExit = onCreatureExit
-
-    this.creatureTotalCount = 0
-    this.hasCreature = false
-
-    this.heartbeatTimestamp = Date.now()
-
-    this.socketSetup()
-  }
-
-  get isActive() {
-    return (Date.now() - this.heartbeatTimestamp) < config.CLIENT_HEARTBEAT_INACTIVE_THRESHOLD
-  }
-
-  acquireCreature(position) {
-    console.log('acquireCreature: ', this.id)
-    this.socket.emit('acquireCreature', position)
-    this.creatureTotalCount++
-    this.hasCreature = true
-  }
-
-  releaseCreature(position) {
-    if (!this.hasCreature) return
-    this.hasCreature = false
-    this.onCreatureExit(this.id, position)    
-  }
-
-  socketSetup() {
-    this.socket.on('creatureExit', (position) => {
-      this.releaseCreature(position)
-    })
-
-    this.socket.on('disconnect', () => {
-      this.releaseCreature({ x: 0, y: 0 })
-      this.onDisconnect(this.id)
-    })
-
-    this.socket.on('heartbeat', () => {
-      // console.log(this.id, ' heartbeat')
-      this.heartbeatTimestamp = Date.now()
-    })
-  }
-
-  socketEmit(evt, data) {
-    this.socket.emit(evt, data)
-  }
-}
