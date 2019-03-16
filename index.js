@@ -1,5 +1,12 @@
 import { manager } from './manager'
 import bodyParser from 'body-parser'
+import config from './config.json'
+
+const GARDEN_NAME = process.argv[2]
+const GARDEN_CONFIG = config.gardens[GARDEN_NAME]
+
+console.log('Starting garden: ', GARDEN_NAME)
+console.dir(GARDEN_CONFIG)
 
 var app = require('express')()
 app.use(bodyParser.json())
@@ -7,7 +14,7 @@ app.use(bodyParser.urlencoded({ extended: true }))
 
 var http = require('http').Server(app)
 var io = require('socket.io')(http)
-var port = process.env.PORT || 3001;
+var port = GARDEN_CONFIG.port || 3001;
 
 app.use(function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
@@ -16,7 +23,7 @@ app.use(function(req, res, next) {
 })
 
 http.listen(port, function(){
-  console.log('listening on *:3001')
+  console.log('listening on *:', port)
 })
 
 
