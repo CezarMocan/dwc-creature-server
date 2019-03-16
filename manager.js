@@ -1,4 +1,5 @@
-import config from "./config.json"
+import network from './network'
+import { CREATURE_FORCE_MOVE_MS, getGardenName, getOtherGardenAddress } from "./config"
 import Client from './Client'
 
 const MOCK_CREATURE_ID = 3
@@ -41,35 +42,7 @@ class Manager {
     console.log('disconnected: ', id, this.noClients)
   }
 
-  onClientCreatureExit(creatureId, clientId) {
-    console.log('Creature exited: ', creatureId, clientId)
-    this.moveCreature(creatureId, clientId)
-  }
-
-  helloCreature(creatureId) {
-    if (this.creatures[creatureId]) {
-      console.warn('Creature ' + creatureId + ' is already in this garden.\nNo action taken\n\n')
-      return
-    }
-
-    this.creatures[creatureId] = {
-      helloTimestamp: Date.now()
-    }
-
-    this.moveCreature(creatureId, -1)
-  }
-
-  goodbyeCreature(creatureId) {
-    if (!this.isCreaturePresent(creatureId)) return
-    const creatureData = this.creatures[creatureId]
-    delete this.creatures[creatureId]
-  }
-
-  isCreaturePresent(creatureId) {
-    return !!this.creatures[creatureId]
-  }
-
-  moveCreature(creatureId, prevId) {
+  moveCreatureToNewClient(creatureId, prevId) {
     // If the creature has already left the garden, do nothing
     if (!this.isCreaturePresent(creatureId)) return
 
@@ -98,6 +71,8 @@ class Manager {
     this.passCreatureTo(creatureId, nextClient)
   }
 
+  // TODO (cezar): This should live in the Client, that's the class who should be 
+  // responsible for doing forced releases & so on.
   passCreatureTo(creatureId, client) {
     if (!client) return
     client.acquireCreature(creatureId)
@@ -106,7 +81,6 @@ class Manager {
     const clientCurrCreatureCount = client.creatureTotalCount
 
     setTimeout(() => {
-      console.log('Force release check: ', client.hasCreature(creatureId), client.creatureTotalCount, clientCurrCreatureCount, client.isActive)
       if (client.hasCreature(creatureId) && 
           client.creatureTotalCount == clientCurrCreatureCount && 
           !client.isActive) 
@@ -115,7 +89,46 @@ class Manager {
         client.releaseCreature(creatureId)
       }
 
-    }, config.CREATURE_FORCE_MOVE_MS)
+    }, CREATURE_FORCE_MOVE_MS)
+  }
+
+  onClientCreatureExit(creatureId, clientId, nextGarden = getGardenName()) {
+    console.log('Creature exited: ', creatureId, clientId)
+    if (nextGarden == getGardenName()) {
+      console.log('Creature staying in the same garden')
+      this.moveCreatureToNewClient(creatureId, clientId)
+    } else {
+      console.log('Creature moving to garden: ', nextGarden)
+      this.moveCreatureToNewGarden(creatureId, nextGarden)
+    }
+  }
+
+  helloCreature(creatureId) {
+    if (this.creatures[creatureId]) {
+      console.warn('Creature ' + creatureId + ' is already in this garden.\nNo action taken\n\n')
+      return
+    }
+
+    this.creatures[creatureId] = {
+      helloTimestamp: Date.now()
+    }
+
+    this.moveCreatureToNewClient(creatureId, -1)
+  }
+
+  goodbyeCreature(creatureId) {
+    if (!this.isCreaturePresent(creatureId)) return
+    const creatureData = this.creatures[creatureId]
+    delete this.creatures[creatureId]
+  }
+
+  isCreaturePresent(creatureId) {
+    return !!this.creatures[creatureId]
+  }
+
+  moveCreatureToNewGarden(creatureId, newGarden) {
+    this.goodbyeCreature(creatureId)
+    network.sendCreatureToGarden(newGarden, creatureId)
   }
 }
 

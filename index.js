@@ -1,12 +1,16 @@
 import { manager } from './manager'
 import bodyParser from 'body-parser'
-import config from './config.json'
+import { setGarden, getGardenConfig, getOtherGardens } from './config'
 
-const GARDEN_NAME = process.argv[2]
-const GARDEN_CONFIG = config.gardens[GARDEN_NAME]
+setGarden(process.argv[2])
 
-console.log('Starting garden: ', GARDEN_NAME)
+const GARDEN_CONFIG = getGardenConfig()
+const OTHER_GARDENS = getOtherGardens()
+
+console.log('Starting garden: ', GARDEN_CONFIG.name)
 console.dir(GARDEN_CONFIG)
+console.log('The other gardens are: ')
+console.dir(OTHER_GARDENS)
 
 var app = require('express')()
 app.use(bodyParser.json())
@@ -14,7 +18,7 @@ app.use(bodyParser.urlencoded({ extended: true }))
 
 var http = require('http').Server(app)
 var io = require('socket.io')(http)
-var port = GARDEN_CONFIG.port || 3001;
+var port = GARDEN_CONFIG.port || 3010;
 
 app.use(function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
@@ -38,8 +42,9 @@ app.post('/hello', (req, res, next) => {
   const creatureId = req.body.creature
 
   if (!creatureId) {
-    const msg = 'Warning: The request does not have a "creature" parameter'
+    const msg = 'Warning: The request does not have a "creature" parameter'    
     console.warn(msg)
+    console.dir(req.body)
     res.send(msg)
     return
   }

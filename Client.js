@@ -1,4 +1,4 @@
-import config from "./config.json"
+import { CLIENT_HEARTBEAT_INACTIVE_THRESHOLD, getGardenConfig, getOtherGardens } from "./config"
 
 export default class Client {
   constructor({ id, socket, onDisconnect, onCreatureExit }) {
@@ -16,8 +16,13 @@ export default class Client {
   }
 
   socketSetup() {
-    this.socket.on('creatureExit', ({ creatureId }) => {
-      this.releaseCreature(creatureId)
+    this.socket.emit('gardenInfo', {
+      localGarden: getGardenConfig(),
+      remoteGardens: getOtherGardens()
+    })
+
+    this.socket.on('creatureExit', ({ creatureId, nextGarden }) => {
+      this.releaseCreature(creatureId, nextGarden)
     })
 
     this.socket.on('disconnect', () => {
@@ -32,7 +37,7 @@ export default class Client {
   }
 
   get isActive() {
-    return (Date.now() - this.heartbeatTimestamp) < config.CLIENT_HEARTBEAT_INACTIVE_THRESHOLD
+    return (Date.now() - this.heartbeatTimestamp) < CLIENT_HEARTBEAT_INACTIVE_THRESHOLD
   }
 
   hasCreature(creatureId) {
@@ -46,10 +51,10 @@ export default class Client {
     this.socket.emit('acquireCreature', { creatureId })
   }
 
-  releaseCreature(creatureId) {
+  releaseCreature(creatureId, nextGarden) {
     if (!this.hasCreature(creatureId)) return
     delete this.creatureOwnership[creatureId]
-    this.onCreatureExit(creatureId, this.id)
+    this.onCreatureExit(creatureId, this.id, nextGarden)
   }
 
   releaseAllCreatures() {
