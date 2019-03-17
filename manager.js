@@ -28,7 +28,7 @@ class Manager {
     // If this is the first client in current session, send all active creatures over to them.
     if (this.noClients == 1) {
       Object.keys(this.creatures).forEach((creatureId) => {
-        this.passCreatureTo(creatureId, client)
+        this.moveCreatureToNewClient(creatureId)
       })
     }
 
@@ -57,10 +57,10 @@ class Manager {
     const clients = clientsActive.length <= 1 ? clientsActive : clientsActive.filter((client) => client.id != prevId)
 
     // Find the minimum number of times the creature has visited a client
-    const minOwned = clients.reduce((acc, client) => Math.min(acc, client.creatureTotalCount), 100000)
+    const minOwned = clients.reduce((acc, client) => Math.min(acc, client.allCreaturesTotalCount), 100000)
 
     // Get all clients who've been visited least by the creature
-    const candidates = clients.filter((client) => (client.creatureTotalCount == minOwned))
+    const candidates = clients.filter((client) => (client.allCreaturesTotalCount == minOwned))
 
     // Select the next client at random
     const nextClient = candidates[parseInt(Math.floor(Math.random() * candidates.length))]

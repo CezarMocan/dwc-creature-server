@@ -52,6 +52,12 @@ export default class Client {
     return this.creatureTotalCount[creatureId] || 0
   }
 
+  get allCreaturesTotalCount() {
+    return Object.values(this.creatureTotalCount).reduce((acc, obj) => {
+      return acc + (obj || 0)
+    }, 0)
+  }
+
   acquireCreature(creatureId) {
     console.log('acquireCreature: ', creatureId, this.id)
     this.increaseCreatureTotalCount(creatureId)
