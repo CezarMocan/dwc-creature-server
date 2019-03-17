@@ -31,7 +31,6 @@ export default class Client {
     })
 
     this.socket.on('heartbeat', () => {
-      // console.log(this.id + ' heartbeat')
       this.heartbeatTimestamp = Date.now()
     })
   }

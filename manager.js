@@ -2,8 +2,6 @@ import network from './network'
 import { CREATURE_FORCE_MOVE_MS, getGardenName, getOtherGardenAddress } from "./config"
 import Client from './Client'
 
-const MOCK_CREATURE_ID = 3
-
 class Manager {
   constructor() {
     this.clients = {}
