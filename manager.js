@@ -1,5 +1,5 @@
 import network from './network'
-import { CREATURE_FORCE_MOVE_MS, getGardenName, getOtherGardenAddress } from "./config"
+import { getGardenName, getOtherGardenAddress } from "./config"
 import Client from './Client'
 
 class Manager {
@@ -66,28 +66,7 @@ class Manager {
     const nextClient = candidates[parseInt(Math.floor(Math.random() * candidates.length))]
 
     // Pass creature to next client
-    this.passCreatureTo(creatureId, nextClient)
-  }
-
-  // TODO (cezar): This should live in the Client, that's the class who should be 
-  // responsible for doing forced releases & so on.
-  passCreatureTo(creatureId, client) {
-    if (!client) return
-    client.acquireCreature(creatureId)
-
-    // If client has been holding on to the creature for too long, move on.
-    const clientCurrCreatureCount = client.creatureTotalCount
-
-    setTimeout(() => {
-      if (client.hasCreature(creatureId) && 
-          client.creatureTotalCount == clientCurrCreatureCount && 
-          !client.isActive) 
-      {
-        console.log('THIS IS A FORCED RELEASE')
-        client.releaseCreature(creatureId)
-      }
-
-    }, CREATURE_FORCE_MOVE_MS)
+    if (nextClient) nextClient.acquireCreature(creatureId)
   }
 
   onClientCreatureExit(creatureId, clientId, nextGarden = getGardenName()) {

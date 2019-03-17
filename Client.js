@@ -1,4 +1,4 @@
-import { CLIENT_HEARTBEAT_INACTIVE_THRESHOLD, getGardenConfig, getOtherGardens } from "./config"
+import { CREATURE_FORCE_MOVE_MS, CLIENT_HEARTBEAT_INACTIVE_THRESHOLD, getGardenConfig, getOtherGardens } from "./config"
 
 export default class Client {
   constructor({ id, socket, onDisconnect, onCreatureExit }) {
@@ -7,7 +7,7 @@ export default class Client {
     this.onDisconnect = onDisconnect
     this.onCreatureExit = onCreatureExit
 
-    this.creatureTotalCount = 0
+    this.creatureTotalCount = {}
     this.creatureOwnership = {}
 
     this.heartbeatTimestamp = Date.now()
@@ -43,16 +43,41 @@ export default class Client {
     return !!this.creatureOwnership[creatureId]
   }
 
+  increaseCreatureTotalCount(creatureId) {
+    if (!this.creatureTotalCount[creatureId])
+      this.creatureTotalCount[creatureId] = 1
+  }
+
+  getCreatureTotalCount(creatureId) {
+    return this.creatureTotalCount[creatureId] || 0
+  }
+
   acquireCreature(creatureId) {
     console.log('acquireCreature: ', creatureId, this.id)
-    this.creatureTotalCount++
+    this.increaseCreatureTotalCount(creatureId)
     this.creatureOwnership[creatureId] = true
     this.socket.emit('acquireCreature', { creatureId })
+
+    // Force release the creature if the client is inactive for a while
+    const currCreatureCount = this.getCreatureTotalCount(creatureId)
+
+    setTimeout(() => {
+      if (this.hasCreature(creatureId) && 
+          this.getCreatureTotalCount(creatureId) == currCreatureCount && 
+          !this.isActive) 
+      {
+        console.log('Client ', this.id, ' force releasing creature ', creatureId)
+        this.releaseCreature(creatureId)
+      }
+
+    }, CREATURE_FORCE_MOVE_MS)
+
   }
 
   releaseCreature(creatureId, nextGarden) {
     if (!this.hasCreature(creatureId)) return
     delete this.creatureOwnership[creatureId]
+    delete this.creatureTotalCount[creatureId]
     this.onCreatureExit(creatureId, this.id, nextGarden)
   }
 

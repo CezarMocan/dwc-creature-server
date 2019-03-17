@@ -36,6 +36,12 @@ io.on('connection', (socket) => {
   manager.addClient(socket)
 })
 
+// Debug endpoint for getting the number of connected clients
+app.get('/noclients', (req, res, next) => {
+  const noClients = manager.noClients
+  res.send({ noClients })
+})
+
 // Creature entering the garden
 // curl -d 'creature=2' http://localhost:3001/hello
 app.post('/hello', (req, res, next) => {
